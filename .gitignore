@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+ENV/
+
+# Entornos y secretos
+.env
+.env.*
+*.key
+secrets.*
+
+# Datos sensibles / grandes (las memorias de traducción reales no se versionan por defecto)
+# Descomenta o ajusta según la política de datos que se decida:
+# data/
+# *.tmx
+# *.sdltm
+
+# IDE / editores
+.idea/
+.vscode/
+*.swp
+
+# Sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Logs y temporales
+*.log
+tmp/
+temp/
