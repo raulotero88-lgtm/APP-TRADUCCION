@@ -1,7 +1,7 @@
 # APP-TRADUCCIÓN — Documento de control del proyecto
 
 > **Documento vivo.** Es la única fuente de verdad del estado del proyecto, las decisiones tomadas y por dónde continuar.
-> **Última actualización:** 2026-06-04
+> **Última actualización:** 2026-06-05
 > **Repo:** https://github.com/raulotero88-lgtm/APP-TRADUCCION
 
 ---
@@ -42,6 +42,18 @@ Evidencia: dos SKUs casi idénticos (M3 Mobile SM25W, solo cambia color) traduci
 
 **Conclusión clave:** el mismo input produce outputs distintos → es un problema de **falta de determinismo y de anclaje terminológico**, no de "el modelo no sabe traducir".
 
+### Prioridad de los errores (Vanesa, Bloque 1)
+
+Vanesa ordenó los tres errores de mayor a menor gravedad — y el orden de *dolor* resulta ser el **inverso** al de dificultad técnica:
+
+| # | Gravedad | Error | Por qué (Vanesa) |
+|---|---|---|---|
+| 1 | **Más grave** | Mistraducción (`hand strap` → `lazo para llevar`) | Engaña: el comprador lee el texto sin ver la foto e imagina otro objeto. Error de *significado*. |
+| 2 | Intermedio | Inconsistencia (`batería`/`acumulador`/`pilas`) | En traducción técnica la variabilidad léxica es un defecto; misma pieza → mismo término. Inventa diferencias que no existen. |
+| 3 | **Menos grave** | Spanglish (término sin traducir) | El comprador profesional conoce el inglés del sector; cuesta *fatiga de lectura*, no malentendido. |
+
+**Lectura de diseño:** los tres síntomas colapsan en una sola palanca → **cobertura terminológica + imposición obligatoria del término en la salida**. No son tres problemas, son tres caras del mismo.
+
 ---
 
 ## 4. Decisión de enfoque: determinista (TM + glosario), no RAG semántico
@@ -63,6 +75,63 @@ Sobre la hipótesis original de Vanesa ("buscar por el origen inglés y que veng
 | **3 — RAG con embeddings (hipótesis original)** | Vector store + recuperación semántica + generación LLM | Bajo | Sí | Solo como capa *fuzzy* opcional dentro de la 2, no como columna vertebral |
 
 **Recomendación:** Opción 2. Para las fichas de e-commerce, la capa determinista (TM exacta + glosario) hace el grueso; el LLM queda reservado a la prosa, siempre con validación determinista de terminología en la salida.
+
+---
+
+## 5.1. Visión de la solución final (el "norte")
+
+> **En una frase:** una **app integral** tipo *TMS/CAT pipeline headless* para el catálogo (un "mini-Trados automatizado"), con **núcleo determinista (TM + glosario)** que hace el grueso y un **LLM acotado** solo para lo nuevo, con *enforcement* terminológico sobre su salida.
+
+Claves de la visión:
+- **App integral → SÍ**, es la forma (el paraguas que orquesta las capas).
+- **RAG → NO** como columna vertebral; a lo sumo un *fuzzy match* opcional como **sugerencia**.
+- **LLM interno → SÍ**, pero como la pieza **más pequeña y vigilada**, no como el protagonista.
+
+La idea contraintuitiva: el LLM es el componente **más acotado** del sistema. El protagonista es el núcleo determinista (TM + glosario). No es "un RAG" ni "un LLM con buen prompt": es una tubería por capas donde **cada capa cura un síntoma de §3**.
+
+### Tubería
+
+```
+        Texto origen (EN / DE)
+                │
+   [1] Ingesta + normalización
+                │
+        ¿Hay match EXACTO en la TM?
+          ┌─────┴─────┐
+       SÍ │           │ NO
+          ▼           ▼
+  [2] Reutiliza   [3] LLM acotado (Azure, temp 0)
+  la traducción       con los términos del glosario
+  validada,           inyectados en el prompt
+  calcada             │
+          │           ▼
+          │   [4] ENFORCEMENT terminológico
+          │   (forzar los términos del glosario
+          │    sobre la salida del LLM)
+          └─────┬─────┘
+                ▼
+   [5] Salida (Excel para revisar / importable a Drupal)
+                ▼
+   [6] Comercial detecta errores ──► realimenta
+       TM + glosario  (lo mantiene el traductor)
+```
+
+### Qué cura cada capa
+- **[2] TM exacta** → **inconsistencia** (mismo origen → misma traducción, siempre).
+- **[3]+[4] Glosario + enforcement** → **Spanglish** y **mistraducción** (el término correcto ya fichado y se impone).
+- **[6] Realimentación** → **aprendizaje** del sistema (comercial = QA distribuido; traductor = dueño del glosario).
+
+### El RAG, fuera de la columna vertebral
+Un RAG decide por "parecido"; aquí se necesita "idéntico". Único hueco legítimo: un *fuzzy match* como **sugerencia** (no decisión) cuando no hay match exacto — mejora opcional de la Fase 4, nunca la base.
+
+### Confianza (qué está fijo y qué calibrará el Bloque 2)
+- 🟢 **La forma** (app integral, núcleo determinista, LLM acotado + enforcement) — estable.
+- 🟡 **Las proporciones** (cuánto cubre la TM vs. cuánto cae al LLM) — las fija el Bloque 2 (repetición + estructura de ficha) y la Fase 1.
+- 🟡 **Entrega** (Excel vs. Drupal) → §8.2 · **Alemán** → §8.3 · **"Interno"** (Azure vs. IA externa) → §8.4.
+
+> El Bloque 2 no cambia la *forma*, cambia el *tamaño de las cajas*. La **Fase 1** (TMX → índice de match exacto = cajas [1] y [2]) es la que medirá si la solución tiende a "casi sin LLM" o a "híbrido de verdad".
+
+> ⏳ **Pendiente de validación.** Este "norte" hay que contrastarlo con el **esquema de solución que Raúl planteó en clase** para el caso de Vanesa (vídeo por revisar). Cuando se recupere ese esquema, se compara caja por caja con esta §5.1 y se anota aquí si coincide o en qué difiere.
 
 ---
 
@@ -91,17 +160,18 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 - ✅ Documentación de Vanesa analizada.
 - ✅ Diagnóstico y opciones presentadas al cliente (Raúl).
 - ✅ Cuestionario de auditoría entregado (ver §9).
-- 🔄 **Vanesa respondiendo el Bloque 1** del cuestionario.
-- ⏳ Pendiente: respuestas de los bloques 2–5 y la decisión de §8.
+- ✅ **Bloque 1 respondido** y volcado (ver §9); jerarquía de errores en §3.
+- ✅ **Decisión §8.1 cerrada:** enfoque **Opción 2 (híbrido, dos marchas)**.
+- ⏳ Pendiente: respuestas de los bloques 2–5 y las decisiones §8.2–§8.4.
+- ⏳ Pendiente: **validar el "norte" (§5.1) contra el esquema que Raúl planteó en clase** — revisar el vídeo, extraer su esquema y compararlo con nuestra arquitectura.
 
 ---
 
 ## 8. Decisiones pendientes
 
-1. **¿Qué significa "determinista" aquí?** (bifurca la arquitectura)
-   - (a) **Sin LLM** → Opción 1 (determinismo total, no genera prosa nueva).
-   - (b) **LLM con garantías deterministas** → Opción 2 (híbrido, cubre también marketing).
-   - *Pendiente de las respuestas de Vanesa.*
+1. ~~**¿Qué significa "determinista" aquí?**~~ ✅ **RESUELTO (2026-06-05, Bloque 1) → Opción 2 (híbrido, dos marchas).**
+   - La definición de Vanesa ("el modelo aplica **obligatoriamente** los términos del glosario validado" + "**siempre habrá un %**" + "la **revisión humana no es viable**") solo es coherente con la Opción 2: el "%" presupone un LLM, y "aplicar obligatoriamente los términos" es la capa de *enforcement* determinista sobre su salida. La Opción 1 choca con "revisión humana no viable" (todo lo nuevo quedaría sin cubrir).
+   - **Dos marchas:** fichas de e-commerce ≈ modo determinista (TM exacta + glosario, LLM solo si hace falta); marketing en prosa = LLM acotado + *enforcement* terminológico.
 2. **Alcance de la integración:** ¿herramienta autónoma que devuelve Excel/Word vs. integración automática con Drupal?
 3. **Idiomas origen:** ¿hay memoria alemán→español o solo inglés→español?
 4. **Política de IA:** ¿se permite enviar texto a IA externa o debe quedarse en Azure interno?
@@ -112,13 +182,26 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 
 | Bloque | Tema | Estado |
 |---|---|---|
-| 1 | El dolor real (prioridad de errores, criterio de éxito, coste actual) | 🔄 En curso con Vanesa |
+| 1 | El dolor real (prioridad de errores, criterio de éxito, coste actual) | ✅ Respondido (2026-06-05) — ver abajo |
 | 2 | Qué texto y cuánto (fichas vs. prosa, volumen, formato, idiomas) | ⏳ Pendiente |
 | 3 | Materia prima (acceso/calidad de la TM, glosario existente, alineación) | ⏳ Pendiente |
 | 4 | Reglas de oro (no traducir, términos trampa, contexto, estilo) | ⏳ Pendiente |
 | 5 | Dónde vive y mantenimiento (Drupal vs. fichero, tiempo real vs. lote, política IA, validación, aprendizaje) | ⏳ Pendiente |
 
 *(El detalle completo de las preguntas está en el historial de la conversación; cuando lleguen respuestas se vuelcan aquí.)*
+
+### Respuestas — Bloque 1 (2026-06-05)
+
+**P1 · Prioridad de los errores.** Jerarquía completa (tabla y razones en §3): **mistraducción** (más grave) > **inconsistencia** > **Spanglish** (menos grave). La mistraducción engaña sobre qué es el producto; la inconsistencia genera incertidumbre sobre si dos productos son realmente distintos; el Spanglish solo fatiga (el comprador es profesional y conoce el inglés del sector).
+
+**P2 · Criterio de éxito.** "Que sea determinista y no alucine", asumiendo que siempre quedará un %. **La revisión humana masiva no es viable.** Por eso el criterio operativo es: en la generación, el modelo debe **aplicar obligatoriamente** los términos extraídos de un **glosario previamente validado**. (→ fija §8.1 = Opción 2.)
+
+**P3 · Coste / quién corrige hoy.** La traducción con IA está **en fase de pruebas**; el **departamento comercial de España** valida las muestras antes de pasar a producción. El nº de referencias hace **inviable** la revisión manual. Modelo de operación futuro propuesto por Vanesa:
+- **Comercial** = QA distribuido: detecta errores en su día a día y los deriva al traductor.
+- **Traductor humano** = su tarea principal pasa a ser **mantener los glosarios actualizados**, incorporando terminología nueva **antes** del lanzamiento de productos.
+- → El **glosario/termbase es el centro de gravedad** del sistema y el punto donde entra el *aprendizaje* (las correcciones de comercial se convierten en entradas de glosario).
+
+**Confirmación externa (no preguntada):** Vanesa ratifica por su cuenta el rechazo al RAG semántico — *"la precisión se pierde en la conversión a ese significado numérico abstracto que es el embedding"* (alinea con §4).
 
 ### 3 preguntas imprescindibles
 1. De los 3 errores (Spanglish / mal traducido / inconsistente), ¿cuál duele más?
@@ -151,6 +234,16 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 ---
 
 ## 12. Registro de sesiones (changelog)
+
+### 2026-06-05 — Sesión 2
+- Clonado el repo en local y revisado el estado del proyecto.
+- Recibidas y analizadas las **respuestas del Bloque 1** de Vanesa (+ imagen de la `hand strap` que ilustra por qué `lazo para llevar` es una mistraducción de *significado*).
+- Establecida la **jerarquía de errores** (mistraducción > inconsistencia > Spanglish) → §3.
+- **Cerrada la decisión §8.1 → Opción 2 (híbrido, dos marchas)**, justificada con la propia definición de "determinista" de Vanesa.
+- Confirmado el **glosario como centro de gravedad** y el modelo de operación (comercial = QA distribuido; traductor = mantenimiento del glosario antes de cada lanzamiento).
+- Documentada la **visión de la solución final** (nueva §5.1) como brújula: app integral con núcleo determinista + LLM acotado + enforcement; RAG fuera de la columna vertebral.
+- Anotada tarea pendiente: **revisar el vídeo de clase** y comparar el esquema de solución que Raúl planteó allí con nuestro §5.1.
+- **Próximo paso:** pasar a Vanesa el **Bloque 2** del cuestionario (volumen, formato, fichas vs. prosa, idiomas origen).
 
 ### 2026-06-04 — Sesión 1
 - Analizada la documentación aportada por Vanesa (5 imágenes).
