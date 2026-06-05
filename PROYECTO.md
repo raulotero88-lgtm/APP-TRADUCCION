@@ -131,7 +131,11 @@ Un RAG decide por "parecido"; aquí se necesita "idéntico". Único hueco legít
 
 > El Bloque 2 no cambia la *forma*, cambia el *tamaño de las cajas*. La **Fase 1** (TMX → índice de match exacto = cajas [1] y [2]) es la que medirá si la solución tiende a "casi sin LLM" o a "híbrido de verdad".
 
-> ⏳ **Pendiente de validación.** Este "norte" hay que contrastarlo con el **esquema de solución que Raúl planteó en clase** para el caso de Vanesa (vídeo por revisar). Cuando se recupere ese esquema, se compara caja por caja con esta §5.1 y se anota aquí si coincide o en qué difiere.
+> ✅ **Validado (2026-06-05) contra el esquema del profesor** (foto en [`documentos/IMG_20260605_132742.jpg`](documentos/IMG_20260605_132742.jpg)). Coinciden en la columna vertebral: glosario → componente determinista **sin IA** que extrae la lista de términos → LLM atado a esa lista al final. Equivalencias: su "identificador de términos" (script Python sin IA) = nuestra capa determinista de glosario; su glosario partido en dos ("se traduce" / términos específicos) = nuestro glosario con flags (traducir/no-traducir).
+>
+> **Lo que añadimos sobre su esquema:** (a) la **TM de match exacto** (caja [2]: reúso calcado de lo repetido, que aprovecha la TMX de Trados ya validada), y (b) el **enforcement** sobre la salida (caja [4]): su esquema pasa la lista de términos al LLM y confía en que la respete; nosotros lo **verificamos** en el texto final, que es lo que garantiza el "obligatoriamente" de Vanesa.
+>
+> *Pendiente con Vanesa:* cómo organiza ella hoy su terminología (¿"se traduce" vs. "término fijo"?) — preguntado en el Bloque 2.
 
 ---
 
@@ -146,6 +150,7 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 | `Exportacion_a_TMX_de_segmentos_alineados_como_par_de_idiomas.jpg` | Estructura TMX (`<tuv en-GB>` ↔ `<tuv es-ES>`) | **Fuente principal**: pares alineados validados |
 | `Extracto_de_pares_de_segmentos_de_una_memoria_de_traduccion.jpg` | Tabla de TM (ID, EN, ES, estado TC/LI+) | Memoria de traducción |
 | `Pares_de_documentos_originales_en_ingles_y_sus_traducciones_a_espanol_.jpg` | Word EN + ES (prosa marketing 500-2000 palabras) | Corpus paralelo para marketing |
+| `IMG_20260605_132742.jpg` | **Esquema a mano del profesor** (clase): 2 glosarios → identificador de términos (Python, sin IA) → lista → LLM traductor (Azure+GPT); abajo "N8N?? → app??" | **Fuente del §5.1**; valida nuestra arquitectura |
 
 **Dos tipos de contenido a tratar:**
 - **(A) Fichas de e-commerce** → listas de atributos repetitivas → determinismo casi total.
@@ -162,8 +167,10 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 - ✅ Cuestionario de auditoría entregado (ver §9).
 - ✅ **Bloque 1 respondido** y volcado (ver §9); jerarquía de errores en §3.
 - ✅ **Decisión §8.1 cerrada:** enfoque **Opción 2 (híbrido, dos marchas)**.
-- ⏳ Pendiente: respuestas de los bloques 2–5 y las decisiones §8.2–§8.4.
-- ⏳ Pendiente: **validar el "norte" (§5.1) contra el esquema que Raúl planteó en clase** — revisar el vídeo, extraer su esquema y compararlo con nuestra arquitectura.
+- ⏳ Pendiente: respuestas de los bloques 2–5 y las decisiones §8.2–§8.5.
+- ✅ **Validado el "norte" contra el esquema del profesor** (coincide en la columna vertebral; añadimos TM exacta + enforcement — ver §5.1).
+- ✅ **Enviado a Vanesa** el Bloque 2 (6 preguntas: volumen, formato, fichas vs. prosa, idiomas, repetición).
+- 🔜 **Preparado un seguimiento corto:** validación del esquema del profesor + 2 preguntas sobre el glosario (par EN→ES y términos fijos).
 
 ---
 
@@ -175,6 +182,8 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 2. **Alcance de la integración:** ¿herramienta autónoma que devuelve Excel/Word vs. integración automática con Drupal?
 3. **Idiomas origen:** ¿hay memoria alemán→español o solo inglés→español?
 4. **Política de IA:** ¿se permite enviar texto a IA externa o debe quedarse en Azure interno?
+5. **¿n8n o app a medida?** ¿El orquestador se monta en **n8n** (no-code, rápido para PoC y para integrar Drupal/Azure) o como **app/servicio en Python**?
+   - *Recomendación inicial:* **app a medida para el motor determinista** (identificador de términos + TM + enforcement: testeable y versionado) y **n8n opcional como capa de orquestación/entrega** y para un primer PoC. El motor es código en cualquier caso (el propio esquema del profesor lleva un script Python en el centro). Depende también de §8.2 y §8.4.
 
 ---
 
@@ -183,7 +192,7 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 | Bloque | Tema | Estado |
 |---|---|---|
 | 1 | El dolor real (prioridad de errores, criterio de éxito, coste actual) | ✅ Respondido (2026-06-05) — ver abajo |
-| 2 | Qué texto y cuánto (fichas vs. prosa, volumen, formato, idiomas) | ⏳ Pendiente |
+| 2 | Qué texto y cuánto (fichas vs. prosa, volumen, formato, idiomas) | 📨 Enviado (2026-06-05), esperando respuesta |
 | 3 | Materia prima (acceso/calidad de la TM, glosario existente, alineación) | ⏳ Pendiente |
 | 4 | Reglas de oro (no traducir, términos trampa, contexto, estilo) | ⏳ Pendiente |
 | 5 | Dónde vive y mantenimiento (Drupal vs. fichero, tiempo real vs. lote, política IA, validación, aprendizaje) | ⏳ Pendiente |
@@ -242,8 +251,10 @@ Aportados por Vanesa (en [`documentos/`](documentos/)):
 - **Cerrada la decisión §8.1 → Opción 2 (híbrido, dos marchas)**, justificada con la propia definición de "determinista" de Vanesa.
 - Confirmado el **glosario como centro de gravedad** y el modelo de operación (comercial = QA distribuido; traductor = mantenimiento del glosario antes de cada lanzamiento).
 - Documentada la **visión de la solución final** (nueva §5.1) como brújula: app integral con núcleo determinista + LLM acotado + enforcement; RAG fuera de la columna vertebral.
-- Anotada tarea pendiente: **revisar el vídeo de clase** y comparar el esquema de solución que Raúl planteó allí con nuestro §5.1.
-- **Próximo paso:** pasar a Vanesa el **Bloque 2** del cuestionario (volumen, formato, fichas vs. prosa, idiomas origen).
+- **Validado el esquema del profesor** contra el §5.1: coincide en la columna vertebral (glosario → identificador determinista sin IA → LLM atado a la lista de términos); nosotros añadimos la TM de match exacto y el *enforcement*.
+- Abierta la **decisión §8.5 (n8n vs. app a medida)**: recomendación inicial = app para el motor determinista + n8n opcional para orquestación/PoC.
+- Enviado a Vanesa el **Bloque 2** (6 preguntas). Preparado además un **seguimiento corto** con la validación del esquema del profesor + 2 preguntas sobre su glosario (par EN→ES y términos fijos).
+- **Próximo paso:** esperar las respuestas del **Bloque 2** y del seguimiento, y recalibrar las proporciones del §5.1.
 
 ### 2026-06-04 — Sesión 1
 - Analizada la documentación aportada por Vanesa (5 imágenes).
